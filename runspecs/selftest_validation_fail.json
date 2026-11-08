@@ -1,0 +1,13 @@
+{
+  "schema_version": "0.1",
+  "id": "selftest_validation_fail",
+  "name": "自检：验证不通过",
+  "description": "写出 Pass=false 的验证记录，应判 validation_failed。",
+  "entry": {"kind": "matlab", "command": "addpath('src'); bad_validation", "workdir": "selftest"},
+  "sources": [{"root": "tests/fixtures", "include": ["selftest/src"], "role": "entry"}],
+  "empty_dirs": ["selftest/results"],
+  "expected_outputs": ["results/validation.csv"],
+  "validation": {"file": "selftest/results/validation.csv", "pass_column": "Pass"},
+  "timeout_s": 300,
+  "output_encoding": "gbk"
+}

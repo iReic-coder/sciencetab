@@ -1,0 +1,23 @@
+{
+  "schema_version": "0.1",
+  "id": "selftest_quick",
+  "name": "自检：短任务",
+  "description": "只用于验证从页面触发运行的完整通路，不涉及科研计算。",
+  "entry": {
+    "kind": "matlab",
+    "command": "addpath('src'); quick_ok",
+    "workdir": "selftest"
+  },
+  "sources": [
+    {
+      "root": "tests/fixtures",
+      "include": ["selftest/src"],
+      "role": "entry"
+    }
+  ],
+  "empty_dirs": ["selftest/results"],
+  "expected_outputs": ["results/quick.csv"],
+  "comparable_outputs": ["results/quick.csv"],
+  "timeout_s": 300,
+  "output_encoding": "gbk"
+}

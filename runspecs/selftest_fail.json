@@ -1,0 +1,12 @@
+{
+  "schema_version": "0.1",
+  "id": "selftest_fail",
+  "name": "自检：运行失败",
+  "description": "未捕获错误，应判 failed 且退出码非 0。",
+  "entry": {"kind": "matlab", "command": "addpath('src'); self_error", "workdir": "selftest"},
+  "sources": [{"root": "tests/fixtures", "include": ["selftest/src"], "role": "entry"}],
+  "empty_dirs": ["selftest/results"],
+  "expected_outputs": [],
+  "timeout_s": 300,
+  "output_encoding": "gbk"
+}

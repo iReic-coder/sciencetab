@@ -1,0 +1,22 @@
+# 运行数据与内部材料不发布
+data/
+.dsh/
+verification/
+docs/planning/
+ScienceTab_产品规划与技术架构研究_任务说明.md
+
+# 含本机绝对路径的 RunnerSpec
+runspecs/rr_thz_rate_power.json
+runspecs/*.local.json
+
+# AIPOCH 试用安装包（体积大，可复现）
+verification/m0/aipoch/
+verification/m0/runs/
+
+# 杂项
+*.pyc
+__pycache__/
+*.log
+# 打包产物
+dist/
+

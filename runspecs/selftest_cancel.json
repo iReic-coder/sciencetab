@@ -1,0 +1,22 @@
+{
+  "schema_version": "0.1",
+  "id": "selftest_cancel",
+  "name": "自检：取消与超时",
+  "description": "只用于验证取消/超时通路，不涉及任何科研计算。",
+  "entry": {
+    "kind": "matlab",
+    "command": "addpath('src'); sleep_loop",
+    "workdir": "selftest"
+  },
+  "sources": [
+    {
+      "root": "tests/fixtures",
+      "include": ["selftest/src"],
+      "role": "entry"
+    }
+  ],
+  "empty_dirs": ["selftest/results"],
+  "expected_outputs": [],
+  "timeout_s": 600,
+  "output_encoding": "gbk"
+}

@@ -1,0 +1,32 @@
+{
+  "schema_version": "0.1",
+  "id": "example_rate_power",
+  "name": "示例：速率—功率对照",
+  "description": "示例 RunnerSpec。把 SCIENCETAB_RESEARCH_ROOT 指向你自己的科研工程根目录，按实际目录结构改 include。",
+  "entry": {
+    "kind": "matlab",
+    "command": "addpath('src'); run_all",
+    "workdir": "my_experiment"
+  },
+  "sources": [
+    {
+      "root": "${SCIENCETAB_RESEARCH_ROOT}",
+      "include": ["my_experiment/src"],
+      "role": "entry"
+    },
+    {
+      "root": "${SCIENCETAB_RESEARCH_ROOT}",
+      "include": ["shared_experiment/src", "shared_experiment/inherited_model"],
+      "role": "dependency"
+    }
+  ],
+  "empty_dirs": ["my_experiment/results"],
+  "expected_outputs": ["results/summary.csv", "results/validation.csv"],
+  "validation": {
+    "file": "my_experiment/results/validation.csv",
+    "pass_column": "Pass"
+  },
+  "comparable_outputs": ["results/summary.csv", "results/validation.csv"],
+  "timeout_s": 900,
+  "output_encoding": "gbk"
+}
