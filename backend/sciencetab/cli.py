@@ -28,8 +28,15 @@ def cmd_run(args):
     def emit(message):
         print("[run] %s" % message, file=sys.stderr, flush=True)
 
-    result = run_mod.start_run(spec, data_root, idempotency_key=args.idempotency_key,
-                               timeout_s=args.timeout, emit=emit)
+    try:
+        result = run_mod.start_run(spec, data_root, idempotency_key=args.idempotency_key,
+                                   timeout_s=args.timeout, emit=emit,
+                                   allow_concurrent=args.force)
+    except run_mod.BusyError as exc:
+        print(json.dumps({"error": "busy", "running": exc.run_id,
+                          "message": "已有运行在进行；加 --force 可强制并发（不建议）"},
+                         ensure_ascii=False, indent=2))
+        return 3
     completion = result["completion"]
     print(json.dumps({
         "run_id": result["run_id"],
@@ -109,6 +116,8 @@ def main(argv=None):
     p_run.add_argument("--spec", required=True, help="RunnerSpec 路径或 id")
     p_run.add_argument("--idempotency-key", default=None)
     p_run.add_argument("--timeout", type=int, default=None)
+    p_run.add_argument("--force", action="store_true",
+                       help="允许与已有运行并发（默认拒绝：并发 MATLAB 会让在线许可排队）")
     p_run.set_defaults(func=cmd_run)
 
     p_list = sub.add_parser("list", help="列出运行")

@@ -16,14 +16,17 @@ $env:PYTHONPATH = "D:\ScienceTab\backend"
 
 | 路径 | 内容 |
 |---|---|
-| `/` | 运行列表 + 登记入口（每个入口一个"运行"按钮） |
+| `/` | 运行列表（2.5 秒自动刷新、按 id/入口/状态过滤）+ 登记入口（每个入口一个"运行"按钮） |
 | `/specs/<id>` | 入口详情：依赖、期望产物、该入口的全部运行 |
-| `/runs/<id>` | 运行详情：状态、规格哈希、产物哈希与下载、验证记录、日志尾部、来源导出 |
-| `/compare?a=&b=` | 两次运行对比：只比较同一规格记录的可比产物哈希 |
+| `/runs/<id>` | 运行详情：状态/耗时/退出码自动更新；产物、验证、日志、来源四个标签页；日志增量流式显示 |
+| `/compare?a=&b=` | 两次运行对比：下拉选择、自动渲染、不同产物给出两侧哈希 |
 | `/runs/<id>/export?format=json` | 来源清单（配置、依赖哈希、产物、验证、环境） |
-| `/api/runs`、`/api/runs/<id>`、`/api/specs` | JSON 接口 |
+| `/api/runs`、`/api/runs/<id>`、`/api/runs/<id>/log?offset=`、`/api/compare`、`/api/start`、`/api/cancel` | JSON 接口 |
 
-POST 需要页面内的表单令牌（`Origin` 之外再加一层），无令牌返回 403。
+交互全部走 `fetch`：启动、取消、筛选、对比都不刷新整页。POST 需要令牌（页面 `meta[name=csrf-token]`，
+脚本用 `X-CSRF-Token` 头，表单用 hidden 字段），无令牌返回 403。
+
+单槽保护：已有运行在跑时 `/api/start` 返回 409 并带上正在运行的 run_id。
 
 ## 命令行
 
@@ -65,6 +68,16 @@ SQLite 只是查询索引；索引可疑时用 `reindex` 从文件重建。
 
 ## 已知边界
 
-- 单机单用户，不排队；同时提交两个运行会并发启动两个 MATLAB，索引写入串行化依赖 SQLite 超时。
+- 单槽执行：已有运行时新的提交被拒绝（409），不做排队。
 - 不导入历史材料、不做时间线、不记录结论修订（这些属于下一阶段）。
 - 对比只对同规格运行有意义，跨条件不合并，也不判断科学结论。
+
+## 自检
+
+```powershell
+$env:PYTHONPATH = "backend"
+& $py tests/test_state_machine.py       # 六种终态
+& $py tests/test_reconcile.py           # 中断对账
+& $py tests/test_idempotency_stability.py
+& $py tests/test_web_ui.py              # 页面与接口（需要 serve 在跑）
+```

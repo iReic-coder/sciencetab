@@ -23,7 +23,24 @@ from pathlib import Path
 from . import matlab, spec as spec_mod, storage, workspace
 
 STATUSES = ("queued", "running", "succeeded", "failed", "incomplete",
-            "validation_failed", "timed_out", "cancelled")
+            "validation_failed", "timed_out", "cancelled", "interrupted")
+
+
+class BusyError(RuntimeError):
+    """已有运行在跑时拒绝第二次启动：并发 MATLAB 会让在线许可排队到超时。"""
+
+    def __init__(self, run_id):
+        super().__init__("已有运行在进行: %s" % run_id)
+        self.run_id = run_id
+
+
+def active_run(data_root, stale_after_s=300):
+    """当前正在跑的 run_id（先把明显失效的 running 对账掉），没有则返回 None。"""
+    con = storage.connect(data_root)
+    storage.reconcile(con, data_root, stale_after_s=stale_after_s)
+    rows = storage.list_runs(con, status="running", limit=1)
+    con.close()
+    return rows[0]["run_id"] if rows else None
 
 
 def _atomic_write(path, payload):
@@ -77,13 +94,23 @@ def _collect_outputs(spec, work_root, outputs_dir):
     return collected
 
 
-def start_run(spec, data_root, idempotency_key=None, timeout_s=None, emit=None):
+def active_run(data_root, stale_after_s=300):
+    """当前正在跑的 run_id（先把明显失效的 running 对账掉），没有则返回 None。"""
+    con = storage.connect(data_root)
+    storage.reconcile(con, data_root, stale_after_s=stale_after_s)
+    rows = storage.list_runs(con, status="running", limit=1)
+    con.close()
+    return rows[0]["run_id"] if rows else None
+
+
+def start_run(spec, data_root, idempotency_key=None, timeout_s=None, emit=None,
+              allow_concurrent=False, stale_after_s=300):
     """执行一次运行并落盘；相同幂等键直接返回既有运行，不重复启动 MATLAB。"""
     data_root = Path(data_root)
     data_root.mkdir(parents=True, exist_ok=True)
     con = storage.connect(data_root)
     storage.migrate_index_json(con, data_root)
-    storage.reconcile(con, data_root)
+    storage.reconcile(con, data_root, stale_after_s=stale_after_s)
 
     if idempotency_key:
         existing = storage.find_by_idempotency(con, idempotency_key)
@@ -92,6 +119,12 @@ def start_run(spec, data_root, idempotency_key=None, timeout_s=None, emit=None):
             con.close()
             return {"run_id": existing, "reused": True,
                     "completion": record.get("completion", {})}
+
+    if not allow_concurrent:
+        running = storage.list_runs(con, status="running", limit=1)
+        if running:
+            con.close()
+            raise BusyError(running[0]["run_id"])
 
     run_id = _run_id(spec)
     run_dir = data_root / "runs" / run_id
@@ -253,6 +286,7 @@ def compare_runs(data_root, run_a, run_b):
     comparable_identical = [p for p in comparable_shared if a_map[p] == b_map[p]]
     comparable_different = [p for p in comparable_shared if a_map[p] != b_map[p]]
     metadata_only = [p for p in different if p not in comparable]
+    differing_hashes = [{"path": p, "a": a_map[p], "b": b_map[p]} for p in comparable_different]
     return {
         "a": {"run_id": run_a, "status": left["completion"]["status"],
               "duration_s": left["completion"]["duration_s"]},
@@ -261,6 +295,7 @@ def compare_runs(data_root, run_a, run_b):
         "same_spec": same_spec,
         "comparable_identical": comparable_identical,
         "comparable_different": comparable_different,
+        "different_hashes": differing_hashes,
         "identical_all_outputs": identical,
         "different_non_comparable": metadata_only,
         "only_in_a": only_a,
